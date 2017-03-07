@@ -109,30 +109,7 @@ app.delete('/todos/:id', function(req, res) {
 app.put('/todos/:id', function(req, res) {
     var body = _.pick(req.body, 'description', 'completed');
     var todoId = parseInt(req.params.id, 10);
-    /*var todo = _.findWhere(todos, {
-        id: todoId
-    });
 
-    if (!todo) {
-        return res.status(404).send();
-    }
-    var validAttributes = {};
-    if (body.hasOwnProperty('completed') && _.isBoolean(body.completed)) {
-        validAttributes.completed = body.completed;
-    } else if (body.hasOwnProperty('completed')) {
-        console.log('completed');
-        return res.status(400).send();
-    }
-
-    if (body.hasOwnProperty('description') && _.isString(body.description) && body.description.trim().length > 0) {
-        validAttributes.description = body.description;
-    } else if (body.hasOwnProperty('description')) {
-        console.log('description');
-        return res.status(400).send();
-    }
-
-    _.extend(todo, validAttributes);
-    res.json(todo);*/
     //update todo in porstgres
 
     var validAttributes = {};
@@ -165,6 +142,22 @@ app.put('/todos/:id', function(req, res) {
             res.status(400).json(e);
         });
 
+
+});
+
+//save user
+app.post('/users', function(req, res){
+    var body = _.pick(req.body, 'email', 'password');
+    db.user.create(body).then(function(user){
+        if(!!user) {
+            res.json(user.toJSON());
+        } else {
+            res.status(400).send();
+        }
+    },
+    function(error){
+        res.status(500).send();
+    })
 
 });
 
