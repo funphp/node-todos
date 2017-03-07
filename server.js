@@ -166,26 +166,11 @@ app.post('/users', function(req, res){
 app.post('/users/login', function(req, res){
     var body = _.pick(req.body, 'email', 'password');
     var validAttributes = {};
-    if(!(body.hasOwnProperty('email') && _.isString(body.email) && body.email.trim().length > 0)) {
-        res.status(400).send();
-    } else if(!(body.hasOwnProperty('password') && _.isString(body.password) && body.password.trim().length > 0)) {
-        res.status(400).send();
-    } else {
-        db.user.findOne({
-            where: {
-                email:body.email
-                //password:body.password
-            }
-        })
-        .then(function(user){
-            if(!user || !bcrypt.compareSync(body.password, user.get('password_hash'))) {
-                return res.status(401).send();
-            }
-            res.json(user.toPublicJSON());
-        },function(error){
-            res.status(404).send();
-        })
-    }
+    db.user.authenticate(body).then(function(user){
+        res.json(user);
+    },function(){
+        res.status(401).send();
+    })
 
 })
 
