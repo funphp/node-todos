@@ -1,5 +1,5 @@
-module.exports = function(sequelize, DataTypes){
-    return sequelize.define('user',{
+module.exports = function(sequelize, DataTypes) {
+    return sequelize.define('user', {
         email: {
             type: DataTypes.STRING,
             allowNull: false,
@@ -8,12 +8,21 @@ module.exports = function(sequelize, DataTypes){
                 isEmail: true
             }
         },
-        password : {
+        password: {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
                 len: [6, 100]
             }
         }
+    }, {
+        hooks: {
+            beforeValidate: function(user, options) {
+                if (typeof user.email === 'string' && user.email.trim().length > 0) {
+                    user.email = user.email.toLowerCase();
+                }
+            }
+        }
+
     });
 }
