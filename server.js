@@ -200,7 +200,7 @@ app.post('/users/login', function(req, res) {
 
 //initialie DB
 db.sequelize.sync({
-    //force: true
+    force: true
 }).then(function() {
     app.listen(port, function() {
         console.log('Server running on ' + port);
