@@ -56,13 +56,38 @@ module.exports = function(sequelize, DataTypes) {
                             })
                             .then(function(user) {
                                 if (!user || !bcrypt.compareSync(body.password, user.get('password_hash'))) {
-                                     reject();
+                                    reject();
                                 }
-                                 resolve(user);
+                                resolve(user);
                             }, function(error) {
-                                 reject();
+                                reject();
                             })
                     }
+                })
+            },
+            findByToken: function(token) {
+                return new Promise(function(resolve, reject) {
+                    try {
+                        var decodedJwt = jwt.verify(token, 'qwerty12');
+                        var bytes = crypto.AES.decrypt(decodedJwt.token, 'abcd@123');
+                        var tokenData = JSON.parse(bytes.toString(crypto.enc.Utf8));
+
+                        user.findById(tokenData.id).then(function(user) {
+                            if (user) {
+                                resolve(user);
+                            } else {
+                                reject();
+                            }
+                        }, function() {
+                            reject();
+                        });
+
+                    } catch (e) {
+                        console.log(e);
+                        reject();
+                    }
+
+
                 })
             }
         },
@@ -76,13 +101,16 @@ module.exports = function(sequelize, DataTypes) {
                     return undefined;
                 }
                 try {
-                    var stringData = JSON.stringify({id:this.get('id'), type:type});
+                    var stringData = JSON.stringify({
+                        id: this.get('id'),
+                        type: type
+                    });
                     var entcryptoData = crypto.AES.encrypt(stringData, 'abcd@123').toString();
                     var token = jwt.sign({
-                        token:entcryptoData
+                        token: entcryptoData
                     }, 'qwerty12');
                     return token;
-                }catch(e) {
+                } catch (e) {
                     return undefined;
                 }
 
