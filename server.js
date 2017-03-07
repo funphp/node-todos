@@ -15,7 +15,7 @@ app.get('/', function(req, res) {
 })
 
 //GET todos?completed=true&q=string
-app.get('/todos', middleware.requireAuthentication,  function(req, res) {
+app.get('/todos', middleware.requireAuthentication, function(req, res) {
     var query = req.query;
 
     //get todos from DB
@@ -30,6 +30,8 @@ app.get('/todos', middleware.requireAuthentication,  function(req, res) {
             $like: '%' + query.q + '%'
         }
     }
+    //added userId to where clause
+    where.userId = req.user.get('id');
 
     db.todo.findAll({
         where: where
@@ -44,8 +46,12 @@ app.get('/todos', middleware.requireAuthentication,  function(req, res) {
 
 app.get('/todos/:id', middleware.requireAuthentication, function(req, res) {
     var todoId = parseInt(req.params.id, 10);
-
-    db.todo.findById(todoId).then(function(todo) {
+    var where = {};
+    where.userId = req.user.get('id');
+    where.id = todoId
+    db.todo.findOne({
+        where: where
+    }).then(function(todo) {
         if (!!todo) {
             res.json(todo.toJSON());
         } else {
@@ -73,7 +79,12 @@ app.post('/todos', middleware.requireAuthentication, function(req, res) {
         })
         .then(function(todo) {
                 if (todo) {
-                    res.json(todo.toJSON());
+
+                    req.user.addTodo(todo).then(function() {
+                        return todo.reload();
+                    }).then(function(todo) {
+                        res.json(todo.toJSON());
+                    })
                 } else {
                     res.status(400).send();
                 }
@@ -88,10 +99,11 @@ app.post('/todos', middleware.requireAuthentication, function(req, res) {
 app.delete('/todos/:id', middleware.requireAuthentication, function(req, res) {
     var todoId = parseInt(req.params.id, 10);
     //
+    var where = {};
+    where.id = todoId;
+    where.userId = req.user.get('id');
     db.todo.destroy({
-        where: {
-            id: todoId
-        }
+        where: where
     }).then(function(rowsDeleted) {
         if (rowsDeleted == 0) {
             res.status(404).json({
@@ -128,8 +140,13 @@ app.put('/todos/:id', middleware.requireAuthentication, function(req, res) {
         console.log('description');
         return res.status(400).send();
     }
+    var where = {};
+    where.id = todoId;
+    where.userId = req.user.get('id');
 
-    db.todo.findById(todoId).then(function(todo) {
+    db.todo.findOne({
+            where: where
+        }).then(function(todo) {
             if (!!todo) {
                 return todo.update(validAttributes);
             } else {
@@ -148,26 +165,26 @@ app.put('/todos/:id', middleware.requireAuthentication, function(req, res) {
 });
 
 //save user
-app.post('/users', function(req, res){
+app.post('/users', function(req, res) {
     var body = _.pick(req.body, 'email', 'password');
-    db.user.create(body).then(function(user){
-        if(!!user) {
-            res.json(user.toPublicJSON());
-        } else {
-            res.status(400).send();
-        }
-    },
-    function(error){
-        res.status(500).send();
-    })
+    db.user.create(body).then(function(user) {
+            if (!!user) {
+                res.json(user.toPublicJSON());
+            } else {
+                res.status(400).send();
+            }
+        },
+        function(error) {
+            res.status(500).send();
+        })
 
 });
 
 //user login
-app.post('/users/login', function(req, res){
+app.post('/users/login', function(req, res) {
     var body = _.pick(req.body, 'email', 'password');
     var validAttributes = {};
-    db.user.authenticate(body).then(function(user){
+    db.user.authenticate(body).then(function(user) {
         var token = user.generateToken('Authentication');
         if (token) {
             res.header('Auth', token).json(user.toPublicJSON());
@@ -175,15 +192,16 @@ app.post('/users/login', function(req, res){
             res.status(401).send();
         }
 
-    },function(){
+    }, function() {
         res.status(401).send();
     })
 
 })
 
 //initialie DB
-db.sequelize.sync(//{force : true}
-    ).then(function() {
+db.sequelize.sync({
+    //force: true
+}).then(function() {
     app.listen(port, function() {
         console.log('Server running on ' + port);
     });
